@@ -1,0 +1,130 @@
+##############################################################################
+##Clear all existing variables and Load necessary packages
+```{r}
+rm(list=ls(all=TRUE))
+
+library(igraph)	#graph analyses
+library(rgl)	#3D plotting
+library(ggplot2)  #Advanced plotting package
+```
+############################### GET GRAPH #################################
+###SET VARIABLES###
+<!-- id = "250" -->
+<!-- block= "001" -->
+<!-- t = 2	#1 or 2, because I got really lazy of re-typing -->
+<!-- if (t==1){ -->
+<!-- 	freqband = "70-150" -->
+<!-- } else if (t==2){ -->
+<!-- 	freqband = "185-235" -->
+<!-- } -->
+<!-- timepoint = "pre" -->
+
+<!-- ##Set file path -->
+<!-- mfile = file.path("C:","Users","carol","Documents","PhD","Research","Exercise","lesion_roiPair_corra Processing", -->
+<!-- 	paste(id,"-",block,"_power",freqband,"_correlation_noheader.csv",sep="")) -->
+
+##Import lesion_roiPair_corr
+```{r}
+lesion_roiPair_corr <- read.csv("/Users/ARD/Downloads/0747_power264_corr.csv", header=FALSE, sep = ",", fill = TRUE)  #Loading: load csv of left+right hemispheres lesioned ROI-ROI correlation pairs
+
+#lesion_roiPair_corr <- plyr::rename(lesion_roiPair_corr, c(X="SubID"))   #Column Editing: rename subject column from "X" to "SubID"
+```
+
+```{r}
+##Copy first column (channel names) into separate lesion_roiPair_corraframe
+#roinames = lesion_roiPair_corr[,1]
+
+##Remove first column from lesion_roiPair_corraset
+#lesion_roiPair_corr = lesion_roiPair_corr[,-1]
+
+##Remove all perfect correlations between each node and itself
+lesion_roiPair_corr = replace(lesion_roiPair_corr, lesion_roiPair_corr==Inf,0)
+
+##Remove all negative correlations
+lesion_roiPair_corr = replace(lesion_roiPair_corr, lesion_roiPair_corr<0,0)
+
+##Remove all nonexistent correlations
+lesion_roiPair_corr = replace(lesion_roiPair_corr, lesion_roiPair_corr=="NaN",0)
+```
+
+```{r}
+##Make lesion_roiPair_corr into a matrix object
+m = as.matrix(lesion_roiPair_corr)
+
+##Check matrix dimensions
+#these should be equal. If not, you done goofed.
+dim(m)
+
+##Visualize matrix
+image(m, useRaster=TRUE, axes=FALSE)
+```
+
+```{r}
+##Create graph of the matrix
+g = graph.adjacency(m, mode="undirected", weighted=TRUE)
+
+##Decide threshold at which matrix density is below 15%
+threshold = 0	#starting threshold for iteration
+density = graph.density(g) 
+while (density>.01){     #Midnight Scan Club used 1.25%
+	threshold = threshold + .001
+	lesion_roiPair_corr = replace(lesion_roiPair_corr, abs(lesion_roiPair_corr)<threshold, 0)
+	m = as.matrix(lesion_roiPair_corr)
+	g = graph.adjacency(m, mode="undirected", weighted=TRUE)
+	density = graph.density(g)
+}
+print(paste("At density", density, "the correlation threshold is", threshold))
+```
+
+```{r}
+##Visualize thresholded matrix
+image(m, useRaster=TRUE, axes=FALSE)
+
+##Name vertices with roi names from file
+#V(g)$name = roinames
+```
+################################ TO DO #######################################
+#figure out ROI coordinates for the electrodes
+##############################################################################
+
+
+############################### PLOT GRAPH #################################
+```{r}
+##Make a pretty graph (Fruchterman-Reingold force-directed layout)
+lg = layout_with_fr(g)
+plot(g, vertex.size=3, vertex.label=NA, layout=lg)
+
+##Make pretty circle graph
+plot(g, vertex.size=3, vertex.label=NA, layout=layout_in_circle)
+
+##Make a pretty 3D graph
+#can't do without MNI coordinates
+#rglplot(g,vertex.size=7,vertex.label=NA,layout=roi)
+```
+
+```{r}
+##Make a degree histogram
+hist(degree(g),col="darkblue",breaks=max(degree(g)))
+```
+############################### MODULARITY #################################
+```{r}
+##Use infomap to get modules
+c2 = cluster_infomap(g, e.weights = NULL, v.weights = NULL,
+  nb.trials = 100, modularity = TRUE)
+length(c2)
+print(c2)
+
+##Make pretty graph with modules outlined, same F-R layout as above
+plot(c2, g, vertex.size=7, vertex.label=NA, layout=lg)
+
+##Calculate modularity 
+#uses Clauset, Newman & Moore (2004) algorithm to calculate Q
+modularity(c2)
+
+# cat(paste(paste("ID: ",id),
+# paste("block: ",block),
+# paste("frequency: ",freqband),
+# paste("pre/post: ",timepoint),
+# paste(modularity(c2)),
+# "",sep="\n"))
+```

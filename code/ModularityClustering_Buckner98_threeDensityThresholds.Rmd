@@ -1,0 +1,120 @@
+
+
+# Clear and Load Packages
+```{r}
+rm(list=ls(all=TRUE))
+
+library(igraph)	#graph analyses
+library(rgl)	#3D plotting
+library(ggplot2)  #Advanced plotting package
+```
+
+# Import correlation matrix
+```{r}
+fcon_matrix <- read.csv("/Volumes/vosslabhpc/TemporarySharing/ARD/AH_Corr_Data_Nov1/GraphTheory/AndrewsHanna_Buckner98_correlationData_ROInamesShortened.csv", header=TRUE, sep = ",", row.names=1)  
+roinames = data.frame(row.names(fcon_matrix))
+names(roinames) <- c("roiname")
+```
+
+# Preprocessing
+```{r}
+# remove all perfect correlations between each node and itself
+fcon_matrix_preproc = replace(fcon_matrix,fcon_matrix=="Inf",0)
+
+# remove all negative correlations
+# fcon_matrix_preproc = replace(fcon_matrix_preproc, fcon_matrix_preproc<0,0)
+
+# remove all nonexistent correlations
+fcon_matrix_preproc = replace(fcon_matrix_preproc, fcon_matrix_preproc=="NaN",0)
+```
+```{r}
+# make dataframe into a matrix object
+m = as.matrix(fcon_matrix_preproc)
+
+# check matrix dimensions (should be equal)
+dim(m)
+
+# visualize matrix
+image(m, useRaster=TRUE, axes=FALSE)
+```
+
+# Density Threshold of >0.25
+```{r}
+# create graph of the matrix
+g = graph.adjacency(m, mode="undirected", weighted=TRUE)
+
+# decide threshold at which matrix density is below 15%
+
+threshold = 0	#starting threshold for iteration
+density = graph.density(g) 
+while (density>.25){     # Midnight Scan Club used 1.25%
+  threshold = threshold + .001
+  fcon_matrix_preproc = replace(fcon_matrix_preproc, abs(fcon_matrix_preproc)<threshold, 0)
+  m = as.matrix(fcon_matrix_preproc)
+  g = graph.adjacency(m, mode="undirected", weighted=TRUE)
+  density = graph.density(g)
+ }
+ 
+print(paste("At density", density, "the correlation threshold is", threshold))
+
+# visualize thresholded matrix
+image(m, useRaster=TRUE, axes=FALSE)
+```
+```{r}
+# name vertices with roi names from file
+V(g)$name = roinames
+
+# make graph (Fruchterman-Reingold force-directed layout)
+lg = layout_with_fr(g)
+plot(g, vertex.size=3, vertex.label=NA, layout=lg)
+
+# make circle graph
+plot(g, vertex.size=3, vertex.label=NA, layout=layout_in_circle)
+
+# make a 3D graph (need MNI coordinates)
+#roiCoords <- read.csv("/Volumes/vosslabhpc/TemporarySharing/ARD/AH_Corr_Data_Nov1/GraphTheory/AHseedingROIlist_coords.csv", header=TRUE, sep = ",") 
+#rglplot(g,vertex.size=7,vertex.label=NA,layout=roiCoords)
+```
+```{r}
+##Make a degree histogram
+hist(degree(g),col="blue",breaks=max(degree(g)))
+```
+```{r}
+# use infomap to get modules
+c2 = cluster_infomap(g, e.weights = NULL, v.weights = NULL,
+  nb.trials = 100, modularity = TRUE)
+length(c2)
+print(c2)
+
+# calculate modularity 
+# uses Clauset, Newman & Moore (2004) algorithm to calculate Q
+modularity(c2)
+```
+```{r}
+# make graph with modules outlined by sub-groups, same F-R layout as above
+plot(c2, g, vertex.size=7, vertex.label=roinames[,1], layout=lg)
+```
+
+```{r}
+# Plot
+par(mfrow=c(1,2), mar=rep(1,4))
+layout <-layout.fruchterman.reingold(g)
+plot(c2, g, layout=layout, vertex.label=NA, vertex.size=5,  edge.arrow.size=.2)
+
+plot(c2, g, vertex.size=7, vertex.label=roinames[,1], layout=lg)
+
+
+# Change colors of nodes, polygons, and polygon borders
+new_cols <- c("white", "red", "black")[membership(c2)]
+plot(c2, g, col=new_cols, mark.border="black", mark.col=c("lightgreen", "pink", "purple", "yellow"), 
+    layout=layout, vertex.label=roinames[,1], vertex.size=5, edge.arrow.size=.2)
+
+# Add labels
+text(c(-1.15, 0.8, 0.9), c(0.35, -0.7, 0.8), c("dmPFC", "MTL", "MTL", "MTL"))
+```
+
+
+# Density Threshold of >0.30
+
+
+# Density Threshold of >0.35
