@@ -4,7 +4,7 @@
 rm(list=ls(all=TRUE))
 
 library(igraph)	#graph analyses
-library(rgl)	#3D plotting
+# library(rgl)	#3D plotting
 library(ggplot2)  #Advanced plotting package
 ```
 ############################### GET GRAPH #################################
@@ -25,7 +25,7 @@ library(ggplot2)  #Advanced plotting package
 
 ##Import lesion_roiPair_corr
 ```{r}
-lesion_roiPair_corr <- read.csv("/Users/ARD/Downloads/0747_power264_corr.csv", header=FALSE, sep = ",", fill = TRUE)  #Loading: load csv of left+right hemispheres lesioned ROI-ROI correlation pairs
+lesion_roiPair_corr <- read.csv("../data/0747_power264_corr.csv", header=FALSE, sep = ",", fill = TRUE)  #Loading: load csv of left+right hemispheres lesioned ROI-ROI correlation pairs
 
 #lesion_roiPair_corr <- plyr::rename(lesion_roiPair_corr, c(X="SubID"))   #Column Editing: rename subject column from "X" to "SubID"
 ```

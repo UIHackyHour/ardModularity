@@ -5,13 +5,13 @@
 rm(list=ls(all=TRUE))
 
 library(igraph)	#graph analyses
-library(rgl)	#3D plotting
+# library(rgl)	#3D plotting
 library(ggplot2)  #Advanced plotting package
 ```
 
 # Import correlation matrix
 ```{r}
-fcon_matrix <- read.csv("/Volumes/vosslabhpc/TemporarySharing/ARD/AH_Corr_Data_Nov1/GraphTheory/AndrewsHanna_Buckner98_correlationData_ROInamesShortened.csv", header=TRUE, sep = ",", row.names=1)  
+fcon_matrix <- read.csv("../data/AndrewsHanna_Buckner98_correlationData_ROInamesShortened.csv", header=TRUE, sep = ",", row.names=1)  
 roinames = data.frame(row.names(fcon_matrix))
 names(roinames) <- c("roiname")
 ```
