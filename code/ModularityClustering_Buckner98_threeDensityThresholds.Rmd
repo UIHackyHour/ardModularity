@@ -62,7 +62,7 @@ image(m, useRaster=TRUE, axes=FALSE)
 ```
 ```{r}
 # name vertices with roi names from file
-V(g)$name = roinames
+# V(g)$name = roinames$roiname # This is the offending line, it does not appear to be doing what you expect.
 
 # make graph (Fruchterman-Reingold force-directed layout)
 lg = layout_with_fr(g)
@@ -105,12 +105,36 @@ plot(c2, g, vertex.size=7, vertex.label=roinames[,1], layout=lg)
 
 
 # Change colors of nodes, polygons, and polygon borders
-new_cols <- c("white", "red", "black")[membership(c2)]
-plot(c2, g, col=new_cols, mark.border="black", mark.col=c("lightgreen", "pink", "purple", "yellow"), 
+new_cols <- c("white", "red", "black", "blue")[membership(c2)]
+plot(c2, g, col=new_cols, mark.border="black", mark.col=c("tan", "pink", "blue", "lightgray"), 
     layout=layout, vertex.label=roinames[,1], vertex.size=5, edge.arrow.size=.2)
 
 # Add labels
+# JK: the first vector is the x coordinates and the 2nd is the y coordinates, modify as necessary.
 text(c(-1.15, 0.8, 0.9), c(0.35, -0.7, 0.8), c("dmPFC", "MTL", "MTL", "MTL"))
+```
+
+
+## Internet example
+
+```{r}
+# Generate random graph and community structure
+set.seed(23)
+g2 <- sample_gnm(15, 45)
+wc2 <- walktrap.community(g2)
+
+# Plot
+# par(mfrow=c(1,2), mar=rep(1,4))
+layout2 <-layout.fruchterman.reingold(g2)
+# plot(wc2, g2, layout=layout2, vertex.label=NA, vertex.size=5,  edge.arrow.size=.2)
+
+# Change colors of nodes, polygons, and polygon borders
+new_cols2 <- c("white", "red", "black")[membership(wc2)]
+plot(wc2, g2, col=new_cols2, mark.border="black", mark.col=c("tan", "pink", "lightgray"), 
+    layout=layout2, vertex.label=NA, vertex.size=5, edge.arrow.size=.2)
+
+# Add labels
+text(c(-1.15, 0.8, 0.9), c(0.35, -0.7, 0.8), c("A", "B", "C"))
 ```
 
 
