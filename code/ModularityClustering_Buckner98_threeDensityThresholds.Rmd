@@ -27,6 +27,7 @@ fcon_matrix_preproc = replace(fcon_matrix,fcon_matrix=="Inf",0)
 # remove all nonexistent correlations
 fcon_matrix_preproc = replace(fcon_matrix_preproc, fcon_matrix_preproc=="NaN",0)
 ```
+
 ```{r}
 # make dataframe into a matrix object
 m = as.matrix(fcon_matrix_preproc)
