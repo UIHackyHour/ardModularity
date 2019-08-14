@@ -1,0 +1,170 @@
+
+
+# clear and reload
+```{r}
+rm(list=ls(all=TRUE))
+
+library(igraph)	#graph analyses
+library(rgl)	#3D plotting
+library(ggplot2)  #Advanced plotting package
+```
+
+# import correlation matrix
+```{r}
+fcon_matrix <- read.csv("/Volumes/vosslabhpc/TemporarySharing/ARD/AH_Corr_Data_Nov1/GraphTheory/AndrewsHanna_Buckner98_correlationData_True.csv", header=TRUE, sep = ",", row.names=1)  
+#fcon_matrix <- read.csv("/Volumes/vosslabhpc/TemporarySharing/ARD/AH_Corr_Data_Nov1/GraphTheory/AHseeds_roi-roi_corr.csv", header=TRUE, sep = ",", row.names=1)  
+#fcon_matrix <- read.csv("/Volumes/vosslabhpc/TemporarySharing/ARD/AH_Corr_Data_Nov1/GraphTheory/0747_power264_corr.csv", header=FALSE, sep = ",", fill = TRUE)  
+roinames = data.frame(row.names(fcon_matrix))
+names(roinames) <- c("roiname")
+```
+
+
+# preprocess it before converting to a graph for modularity
+```{r}
+
+# remove all perfect correlations between each node and itself
+fcon_matrix_preproc = replace(fcon_matrix,fcon_matrix=="Inf",0)
+
+# remove all negative correlations
+# fcon_matrix_preproc = replace(fcon_matrix_preproc, fcon_matrix_preproc<0,0)
+
+# remove all nonexistent correlations
+fcon_matrix_preproc = replace(fcon_matrix_preproc, fcon_matrix_preproc=="NaN",0)
+```
+
+
+```{r}
+# make dataframe into a matrix object
+m = as.matrix(fcon_matrix_preproc)
+
+# check matrix dimensions
+# these should be equal. If not, you done goofed.
+dim(m)
+
+# visualize matrix
+image(m, useRaster=TRUE, axes=FALSE)
+```
+
+# Density threshold >0.25
+```{r eval=FALSE, include=FALSE}
+# create graph of the matrix
+g = graph.adjacency(m, mode="undirected", weighted=TRUE)
+# 
+# # decide threshold at which matrix density is below 15%
+threshold = 0	#starting threshold for iteration
+density = graph.density(g) 
+while (density>.25){     # Midnight Scan Club used 1.25%
+  threshold = threshold + .001
+  fcon_matrix_preproc = replace(fcon_matrix_preproc, abs(fcon_matrix_preproc)<threshold, 0)
+  m = as.matrix(fcon_matrix_preproc)
+  g = graph.adjacency(m, mode="undirected", weighted=TRUE)
+  density = graph.density(g)
+ }
+ 
+print(paste("At density", density, "the correlation threshold is", threshold))
+```
+
+# Density threshold >0.30
+```{r eval=FALSE, include=FALSE}
+# create graph of the matrix
+g = graph.adjacency(m, mode="undirected", weighted=TRUE)
+
+threshold = 0	#starting threshold for iteration
+density = graph.density(g) 
+while (density>.30){   
+  threshold = threshold + .001
+  fcon_matrix_preproc = replace(fcon_matrix_preproc, abs(fcon_matrix_preproc)<threshold, 0)
+  m = as.matrix(fcon_matrix_preproc)
+  g = graph.adjacency(m, mode="undirected", weighted=TRUE)
+  density = graph.density(g)
+ }
+# 
+print(paste("At density", density, "the correlation threshold is", threshold))
+```
+
+# Density threshold >0.35
+```{r eval=FALSE, include=FALSE}
+# create graph of the matrix
+g = graph.adjacency(m, mode="undirected", weighted=TRUE)
+ 
+threshold = 0	#starting threshold for iteration
+density = graph.density(g) 
+while (density>.35){     
+  threshold = threshold + .001
+  fcon_matrix_preproc = replace(fcon_matrix_preproc, abs(fcon_matrix_preproc)<threshold, 0)
+  m = as.matrix(fcon_matrix_preproc)
+  g = graph.adjacency(m, mode="undirected", weighted=TRUE)
+  density = graph.density(g)
+ }
+# 
+print(paste("At density", density, "the correlation threshold is", threshold))
+```
+
+# manual to understand
+```{r}
+# do not run code in above chunk to do this manually
+# fcon_matrix_preproc = replace(fcon_matrix_preproc, abs(fcon_matrix_preproc)<.25, 0)
+# m = as.matrix(fcon_matrix_preproc)
+# g = graph.adjacency(m, mode="undirected", weighted=TRUE)
+# density = graph.density(g)
+# e.g., .35 seems like a better cut-off, density is .143, which I assume is equivalent to 14.3%
+```
+
+
+```{r}
+# visualize thresholded matrix
+image(m, useRaster=TRUE, axes=FALSE)
+
+# name vertices with roi names from file
+V(g)$name = roinames
+```
+
+# visualize as a graph
+```{r}
+# make graph (Fruchterman-Reingold force-directed layout)
+lg = layout_with_fr(g)
+plot(g, vertex.size=3, vertex.label=NA, layout=lg)
+
+# make circle graph
+plot(g, vertex.size=3, vertex.label=NA, layout=layout_in_circle)
+
+# make a 3D graph
+# need MNI coordinates
+#rglplot(g,vertex.size=7,vertex.label=NA,layout=roi)
+```
+
+
+
+```{r}
+##Make a degree histogram
+hist(degree(g),col="darkblue",breaks=max(degree(g)))
+```
+
+
+
+
+############################### MODULARITY #################################
+```{r}
+# use infomap to get modules
+c2 = cluster_infomap(g, e.weights = NULL, v.weights = NULL,
+  nb.trials = 100, modularity = TRUE)
+length(c2)
+print(c2)
+
+# make graph with modules outlined, same F-R layout as above
+plot(c2, g, vertex.size=7, vertex.label=roinames[,1], layout=lg)
+
+# calculate modularity 
+# uses Clauset, Newman & Moore (2004) algorithm to calculate Q
+modularity(c2)
+
+# example snippets from Carolina to write out per subject if run on per subject correlation matrices
+# could also do this with dplyr
+
+# cat(paste(paste("ID: ",id),
+# paste("block: ",block),
+# paste("frequency: ",freqband),
+# paste("pre/post: ",timepoint),
+# paste(modularity(c2)),
+# "",sep="\n"))
+```
